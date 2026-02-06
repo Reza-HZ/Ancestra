@@ -79,13 +79,13 @@ input_dir/
 ### Basic run (default parameters)
 
 ```bash
-python bcr_simulator.py
+python Ancestra_V1.py
 ```
 
 ### Full parameterized example
 
 ```bash
-python bcr_simulator.py \
+python Ancestra_V1.py \
   --input-dir ./IGH_genes \
   --clones 5 \
   --max-gen 20 \
@@ -103,7 +103,7 @@ python bcr_simulator.py \
 ### For full usage:
 
 ```bash
-python bcrsimulator.py --help
+python Ancestra_V1.py --help
 ```
 
 
