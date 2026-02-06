@@ -55,6 +55,9 @@ Install dependencies via pip:
 ```bash
 pip install numpy biopython matplotlib ete3 mplcursors
 
+### Input Files
+
+Ancestra expects an input directory containing:
 
 input_dir/
 ├── V.fasta        # V gene segments
