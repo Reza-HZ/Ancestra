@@ -100,6 +100,13 @@ python bcr_simulator.py \
   --plot-tree
 ```
 
+### For full usage:
+
+```bash
+python bcrsimulator.py --help
+```
+
+
 ---
 
 ## Command-Line Arguments
