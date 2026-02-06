@@ -23,10 +23,10 @@ Unlike purely sequence-level simulators, Ancestra jointly models:
   Random V/D/J selection, trimming, N-nucleotide insertions, and frame selection consistent with productive rearrangements.
 
 * **Context-dependent somatic hypermutation (SHM)**
-  Implements hotspot (WRC, GYW, DGYW, WRCH) and coldspot motifs using IUPAC ambiguity codes, with tunable mutation rates and transition bias.
+  Implements hotspot (WRC, GYW, DGYW, WRCH) and coldspot motifs, with tunable mutation rates and transition bias.
 
 * **Affinity-based selection**
-  BCRs are selected based on normalized local amino-acid alignment scores between CDR3 regions and supplied antigen epitopes.
+  BCRs are selected based on their affinity to the antigen epitopes.
 
 * **Explicit modeling of deleterious mutations**
   Stop codons and low-affinity variants are penalized probabilistically rather than deterministically.
@@ -71,8 +71,6 @@ input_dir/
 ├── J.fasta        # J gene segments
 └── epitope.txt    # One amino-acid epitope per line
 ```
-
-Epitope sequences are used to compute affinity via local amino-acid alignment (BLOSUM62).
 
 ---
 
@@ -144,6 +142,7 @@ python bcr_simulator.py \
 | `--output-dir` | Output directory                    |
 | `--verbose`    | Enable debug logging                |
 
+By default, `--plot-tree` is set to `false`. When enabled (`--plot-tree`), the simulated lineage tree is rendered and saved as `lineage_tree.png` in the corresponding output directory.
 ---
 
 ## Output Structure
@@ -169,43 +168,10 @@ output_dir/
 * **PNG** (optional): Interactive lineage visualization
 * **JSON**: Full run configuration and summary statistics
 
----
-
-## Intended Use Cases
-
-* Benchmarking clonal clustering algorithms
-* Evaluating BCR phylogenetic reconstruction methods
-* Stress-testing lineage inference under controlled selection pressure
-* Method development for repertoire-scale immunogenomics
-
-Ancestra is explicitly designed for **ground-truth benchmarking**, not for fitting experimental repertoires directly.
 
 ---
 
-## Limitations
-
-* Single-chain (heavy chain) simulation
-* Simplified affinity model based on local alignment
-* No explicit germinal center spatial structure
-* No light-chain pairing
-
-These choices are intentional to maintain interpretability and computational efficiency.
-
----
-
-## Citation
-
-If you use Ancestra in academic work, please cite appropriately. A manuscript or preprint reference can be added here once available.
-
----
-
-## License
-
-[Specify license here — e.g., MIT, BSD-3, GPL-3]
-
----
 
 ## Contact
 
-For questions, issues, or contributions, please open a GitHub issue or contact the repository maintainer.
-
+For questions, bug reports, or contributions, please contact the repository maintainer, **Reza Hassanzadeh**, at **rhz.sbu@gmail.com**.
