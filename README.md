@@ -54,3 +54,11 @@ Install dependencies via pip:
 
 ```bash
 pip install numpy biopython matplotlib ete3 mplcursors
+
+
+input_dir/
+├── V.fasta        # V gene segments
+├── D.fasta        # D gene segments
+├── J.fasta        # J gene segments
+└── epitope.txt    # One amino-acid epitope per line
+
