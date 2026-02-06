@@ -142,7 +142,8 @@ python bcr_simulator.py \
 | `--output-dir` | Output directory                    |
 | `--verbose`    | Enable debug logging                |
 
-By default, `--plot-tree` is set to `false`. When enabled (`--plot-tree`), the simulated lineage tree is rendered and saved as `lineage_tree.png` in the corresponding output directory.
+  By default, `--plot-tree` is set to `false`. When enabled (`--plot-tree`), the simulated lineage tree is rendered and saved as `lineage_tree.png` in the corresponding output directory.
+  
 ---
 
 ## Output Structure
