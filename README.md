@@ -25,7 +25,7 @@ Unlike purely sequence-level simulators, Ancestra jointly models:
 * **Context-dependent somatic hypermutation (SHM)**
   Implements hotspot (WRC, GYW, DGYW, WRCH) and coldspot motifs, with tunable mutation rates and transition bias.
 
-* **Affinity-based selection**
+* **Flexible affinity-based selection**
   BCRs are selected based on their affinity to the antigen epitopes. Affinity can be computed using:
 
   *  CDR3-only region (default; biologically focused and computationally efficient)
