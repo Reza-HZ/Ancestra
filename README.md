@@ -26,7 +26,11 @@ Unlike purely sequence-level simulators, Ancestra jointly models:
   Implements hotspot (WRC, GYW, DGYW, WRCH) and coldspot motifs, with tunable mutation rates and transition bias.
 
 * **Affinity-based selection**
-  BCRs are selected based on their affinity to the antigen epitopes.
+  BCRs are selected based on their affinity to the antigen epitopes. Affinity can be computed using:
+
+  *  CDR3-only region (default; biologically focused and computationally efficient)
+
+  *  Full BCR amino acid sequence (optional)
 
 * **Explicit modeling of deleterious mutations**
   Stop codons and low-affinity variants are penalized probabilistically rather than deterministically.
@@ -97,6 +101,7 @@ python Ancestra_V1.py \
   --p-stop 0.005 \
   --p-min 0.001 \
   --p-trans 0.7 \
+  --use-full-BCR True \
   --plot-tree
 ```
 
@@ -125,6 +130,7 @@ python Ancestra_V1.py --help
 | --------- | ---------------------------------------------- | ------- |
 | `--t-min` | Minimum affinity threshold (early generations) | `0.3`   |
 | `--t-max` | Maximum affinity threshold (late generations)  | `0.8`   |
+| `--use-full-BCR` | If True, affinity is computed using the full amino acid sequence. If False, only the CDR3 region is used.  | `False`   |
 
 ### Mutation model
 
