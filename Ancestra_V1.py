@@ -296,7 +296,81 @@ class BCRSimulator:
         all_bcrs = clean_sequences(all_bcrs)
         merged_all_bcrs = merge_sequences(all_bcrs)
         return all_bcrs, merged_all_bcrs
+    
+    def generate_repertoire_dynamically_fullBCR(self, pathogen, affinity_max_threshold, affinity_min_threshold, 
+                                        max_generations, mutation_rate, p_sub, p_stop, p_min, p_trans):
+        root = self._generate_initial_bcr()
+        root["affinity"] = pathogen.calculate_affinity_a(root["a_sequence"])
+        root["abundance"] = 1
+        all_bcrs = [root]
+        current_generation = [root]
+        generation = 1
+        thresholds = np.linspace(affinity_min_threshold, affinity_max_threshold, max_generations+1)
+        while generation <= max_generations:
+            next_generation = []
+            for parent in current_generation:
+                for _ in range(2):
+                    mutated_seq, num_mutations = self._mutate_sequence(parent["sequence"], mutation_rate, p_trans)
+                    if num_mutations > 0:
+                        mutated_a_seq, min_stop, frame = translate_nucleotide_to_protein_min_stops_cached(mutated_seq)
+                        if mutated_a_seq == parent["a_sequence"]:
+                            cdr3_start = parent['cdr3_start']
+                            cdr3_end = parent['cdr3_end']
+                            affinity = parent['affinity']
+                        else:
+                            cdr3_start = mutated_a_seq.find('C', parent['cdr3_start']-2, parent['cdr3_start']+2)
+                            cdr3_end = min((mutated_a_seq.find(ch, parent['cdr3_end']-3, parent['cdr3_end']+3) for ch in ['F', 'W'] if mutated_a_seq.find(ch, parent['cdr3_end']-3, parent['cdr3_end']+3) != -1), default=-1)
+                            if cdr3_start == -1 or cdr3_end == -1:
+                                continue
+                            affinity = pathogen.calculate_affinity_a(mutated_a_seq)
+                    else:
+                        mutated_a_seq = parent['a_sequence']
+                        min_stop = mutated_a_seq.count('*')
+                        cdr3_start = parent['cdr3_start']
+                        cdr3_end = parent['cdr3_end']
+                        affinity = parent['affinity']
+                        frame = parent['frame']
+                    temp_aff_thresh = thresholds[generation]
+                    abundance = 1
+                    
+                    if affinity >= temp_aff_thresh and min_stop == 0:
+                        selection_p = 1
+                    elif affinity < temp_aff_thresh and min_stop == 0:
+                        selection_p = p_sub
+                    elif affinity >= temp_aff_thresh and not min_stop == 0:
+                        selection_p = p_stop / min_stop
+                    else:
+                        selection_p = p_min / min_stop
+                    
+                    if random.random() > selection_p:
+                        continue
 
+                    child = {
+                        "id": self._generate_bcr_id(),
+                        "sequence": mutated_seq,
+                        "a_sequence":mutated_a_seq,
+                        "frame": frame,
+                        "generation": generation,
+                        "parent": parent["id"],
+                        "affinity": affinity,
+                        "abundance": abundance,
+                        "mutations": num_mutations,
+                        "cdr3_start": cdr3_start,
+                        "cdr3_end": cdr3_end,
+                        "cdr3_len": cdr3_end - cdr3_start + 1,
+                    }
+                    all_bcrs.append(child)
+                    next_generation.append(child)
+
+            if not next_generation:
+                break
+
+            current_generation = next_generation
+            generation += 1
+        
+        all_bcrs = clean_sequences(all_bcrs)
+        merged_all_bcrs = merge_sequences(all_bcrs)
+        return all_bcrs, merged_all_bcrs
 
 def clean_sequences(seq_list):
     id_map = {seq.get("id"): seq for seq in seq_list if "id" in seq}
@@ -653,7 +727,6 @@ def read_fasta(filepath):
 
 
 
-#!/usr/bin/env python3
 """
 BCR Simulator - Generate B-cell receptor repertoires
 
@@ -697,6 +770,7 @@ def parse_arguments():
     parser.add_argument("--p-stop", type=float, default=0.005, help="Base survival probability for high-affinity sequences with stop codons")
     parser.add_argument("--p-min", type=float, default=0.001, help="Base survival probability for low-affinity sequences with stop codons")
     parser.add_argument("--p-trans", type=float, default=0.7, help="Bias in nucleotide substitution favoring transitions over transversions")
+    parser.add_argument("--use-full-BCR", type=bool, default=False, help="Affinity calculations should use the full BCR sequence (T) or only the CDR3 region (F)")
     
     # Output control
     parser.add_argument("--output-dir", type=str, default=os.path.dirname(__file__),
@@ -773,17 +847,30 @@ def main():
         
         try:
             # Run simulation
-            repertoire, merged_repertoire = sim.generate_repertoire_dynamically(
-                pathogen,
-                args.t_max,
-                args.t_min,
-                args.max_gen,
-                args.mu,
-                args.p_sub,
-                args.p_stop,
-                args.p_min,
-                args.p_trans
-            )
+            if args.use_full_BCR:
+                repertoire, merged_repertoire = sim.generate_repertoire_dynamically_fullBCR(
+                    pathogen,
+                    args.t_max,
+                    args.t_min,
+                    args.max_gen,
+                    args.mu,
+                    args.p_sub,
+                    args.p_stop,
+                    args.p_min,
+                    args.p_trans
+                )
+            else:
+                repertoire, merged_repertoire = sim.generate_repertoire_dynamically(
+                    pathogen,
+                    args.t_max,
+                    args.t_min,
+                    args.max_gen,
+                    args.mu,
+                    args.p_sub,
+                    args.p_stop,
+                    args.p_min,
+                    args.p_trans
+                )
             
             stats = calculate_stats(merged_repertoire)
             success = (stats['num_unique_sequences'] >= args.min_seq and 
