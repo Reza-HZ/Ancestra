@@ -123,11 +123,9 @@ class BCRSimulator:
                     j_junc = len(n2 + trimmed_j)//3
                     C_pos = bcr_a_sequence[v_junc_start:v_junc_end].rfind("C")
                     W_pos = bcr_a_sequence[-j_junc:].find('W')
-                    F_pos = bcr_a_sequence[-j_junc:].find('F')
-                    WF_pos = F_pos if F_pos >= 0 else W_pos
-                    if C_pos >= 0 and WF_pos >=0:
+                    if C_pos >= 0 and W_pos >=0:
                         cdr3_start = C_pos + v_junc_start
-                        cdr3_end = len(bcr_a_sequence) - (j_junc - WF_pos)
+                        cdr3_end = len(bcr_a_sequence) - (j_junc - W_pos)
                         flag = True
                         break
             if flag:
@@ -244,7 +242,7 @@ class BCRSimulator:
                             affinity = parent['affinity']
                         else:
                             cdr3_start = mutated_a_seq.find('C', parent['cdr3_start']-2, parent['cdr3_start']+2)
-                            cdr3_end = min((mutated_a_seq.find(ch, parent['cdr3_end']-3, parent['cdr3_end']+3) for ch in ['F', 'W'] if mutated_a_seq.find(ch, parent['cdr3_end']-3, parent['cdr3_end']+3) != -1), default=-1)
+                            cdr3_end = mutated_a_seq.find('W', parent['cdr3_end'] - 3, parent['cdr3_end'] + 3)
                             if cdr3_start == -1 or cdr3_end == -1:
                                 continue
                             affinity = pathogen.calculate_affinity_a(mutated_a_seq[cdr3_start:cdr3_end+1])
