@@ -174,7 +174,7 @@ class BCRSimulator:
         for i in range(seq_len):
             raw_score = 0.0
             target_idx = i
-            for motif, wet in self.mutation_patterns.items():
+            for motif, weight in self.mutation_patterns.items():
                 sub_seq = sequence[i:i+len(motif)]
                 if len(sub_seq) == len(motif) and self._match_hotspot(sub_seq, motif):
                     target_idx = i + HOTSPOT_TARGETS[motif]
