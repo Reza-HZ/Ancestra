@@ -174,7 +174,7 @@ class BCRSimulator:
         for i in range(seq_len):
             raw_score = 0.0
             target_idx = i
-            for motif, weight in self.mutation_patterns.items():
+            for motif, wet in self.mutation_patterns.items():
                 sub_seq = sequence[i:i+len(motif)]
                 if len(sub_seq) == len(motif) and self._match_hotspot(sub_seq, motif):
                     target_idx = i + HOTSPOT_TARGETS[motif]
@@ -754,7 +754,7 @@ def parse_arguments():
     
     # Input paths
     parser.add_argument("--input-dir", type=str, 
-                       default=os.path.join(os.path.dirname(__file__), "IGH genes"),
+                       default=os.path.join(os.path.dirname(__file__), "Data"),
                        help="Directory containing V/D/J FASTA and epitope.txt files")
     
     # Simulation parameters
