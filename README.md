@@ -90,7 +90,7 @@ python main.py
 
 ```bash
 python main.py \
-  --input-dir ./IGH_genes \
+  --input-dir ./Data \
   --clones 5 \
   --max-gen 20 \
   --min-seq 50 \
