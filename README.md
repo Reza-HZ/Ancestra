@@ -83,13 +83,13 @@ input_dir/
 ### Basic run (default parameters)
 
 ```bash
-python Ancestra_V1.py
+python main.py
 ```
 
 ### Full parameterized example
 
 ```bash
-python Ancestra_V1.py \
+python main.py \
   --input-dir ./IGH_genes \
   --clones 5 \
   --max-gen 20 \
@@ -108,7 +108,7 @@ python Ancestra_V1.py \
 ### For full usage:
 
 ```bash
-python Ancestra_V1.py --help
+python main.py --help
 ```
 
 
