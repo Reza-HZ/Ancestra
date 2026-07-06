@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import logging
+import copy
 import json
 from datetime import datetime
 from pathlib import Path
@@ -221,7 +222,7 @@ class BCRSimulator:
         return True
 
     def generate_repertoire_dynamically(self, pathogen, affinity_max_threshold, affinity_min_threshold, 
-                                        max_generations, mutation_rate, p_sub, p_stop, p_min, p_trans):
+                                        max_generations, minimum_num_unique_sequences, mutation_rate, p_sub, p_stop, p_min, p_trans):
         root = self._generate_initial_bcr()
         root["affinity"] = pathogen.calculate_affinity_a(root["a_sequence"][root['cdr3_start']:root['cdr3_end']+1])
         root["abundance"] = 1
@@ -290,16 +291,22 @@ class BCRSimulator:
 
             current_generation = next_generation
             generation += 1
+            if len({d['sequence'] for d in all_bcrs}) >= minimum_num_unique_sequences:
+                break
+        parents_set = {item['parent'] for item in all_bcrs if item.get('parent') is not None}
+        for item in all_bcrs:
+            if item.get('id') not in parents_set:
+                item['abundance'] = 1
         
         all_bcrs = clean_sequences(all_bcrs)
         merged_all_bcrs = merge_sequences(all_bcrs)
         return all_bcrs, merged_all_bcrs
     
     def generate_repertoire_dynamically_fullBCR(self, pathogen, affinity_max_threshold, affinity_min_threshold, 
-                                        max_generations, mutation_rate, p_sub, p_stop, p_min, p_trans):
+                                        max_generations, minimum_num_unique_sequences, mutation_rate, p_sub, p_stop, p_min, p_trans):
         root = self._generate_initial_bcr()
         root["affinity"] = pathogen.calculate_affinity_a(root["a_sequence"])
-        root["abundance"] = 1
+        root["abundance"] = 0
         all_bcrs = [root]
         current_generation = [root]
         generation = 1
@@ -329,7 +336,7 @@ class BCRSimulator:
                         affinity = parent['affinity']
                         frame = parent['frame']
                     temp_aff_thresh = thresholds[generation]
-                    abundance = 1
+                    abundance = 0
                     
                     if affinity >= temp_aff_thresh and min_stop == 0:
                         selection_p = 1
@@ -365,7 +372,12 @@ class BCRSimulator:
 
             current_generation = next_generation
             generation += 1
-        
+            if len({d['sequence'] for d in all_bcrs}) >= minimum_num_unique_sequences:
+                break
+        parents_set = {item['parent'] for item in all_bcrs if item.get('parent') is not None}
+        for item in all_bcrs:
+            if item.get('id') not in parents_set:
+                item['abundance'] = 1
         all_bcrs = clean_sequences(all_bcrs)
         merged_all_bcrs = merge_sequences(all_bcrs)
         return all_bcrs, merged_all_bcrs
@@ -582,6 +594,23 @@ def export_to_fasta(bcrs, filename):
         for b in bcrs:
             f.write(f">{b['id']}@{b['abundance']}\n{b['sequence']}\n")
 
+
+def get_cleaned_bcrs_for_newick(bcrs):
+    new_data = copy.deepcopy(bcrs)
+    id_to_entry = {d['id']: d for d in new_data}
+    zero_ids = [d['id'] for d in new_data if (d['abundance'] == 0 and d['id']!='naive')]
+
+    for zid in zero_ids:
+        zero_entry = id_to_entry.get(zid)
+        if zero_entry is None:
+            continue
+        grandparent = zero_entry['parent']   # may be None
+        for d in new_data:
+            if d['parent'] == zid:
+                d['parent'] = grandparent
+
+    return [d for d in new_data if d['abundance'] != 0 or d['id'] == 'naive']
+
 def export_to_newick(bcrs, filename):
     from collections import defaultdict
     tree = defaultdict(list)
@@ -754,14 +783,14 @@ def parse_arguments():
     
     # Input paths
     parser.add_argument("--input-dir", type=str, 
-                       default=os.path.join(os.path.dirname(__file__), "Data"),
+                       default=os.path.join(os.path.dirname(__file__), "IGH genes"),
                        help="Directory containing V/D/J FASTA and epitope.txt files")
     
     # Simulation parameters
     parser.add_argument("--clones", type=int, default=1, help="Number of independent clones (in a repertoire) to simulate")
-    parser.add_argument("--max-gen", type=int, default=15, help="Maximum depth of lineage expansion")
-    parser.add_argument("--min-seq", type=int, default=10, help="Minimum unique sequences required for acceptance")
-    parser.add_argument("--t-max", type=float, default=0.8, help="Upper bound for selecting high-affinity BCRs during simulation")
+    parser.add_argument("--max-gen", type=int, default=40, help="Maximum depth of lineage expansion")
+    parser.add_argument("--min-seq", type=int, default=200, help="Minimum unique sequences required for acceptance")
+    parser.add_argument("--t-max", type=float, default=0.7, help="Upper bound for selecting high-affinity BCRs during simulation")
     parser.add_argument("--t-min", type=float, default=0.3, help="Minimum affinity required for BCRs to survive early generations")
     parser.add_argument("--mu", type=float, default=0.001, help="Probability of baseline mutation per nucleotide per sequence")
     parser.add_argument("--p-sub", type=float, default=0.3, help="Survival probability for in-frame low-affinity sequences")
@@ -851,6 +880,7 @@ def main():
                     args.t_max,
                     args.t_min,
                     args.max_gen,
+                    args.min_seq,
                     args.mu,
                     args.p_sub,
                     args.p_stop,
@@ -863,14 +893,15 @@ def main():
                     args.t_max,
                     args.t_min,
                     args.max_gen,
+                    args.min_seq,
                     args.mu,
                     args.p_sub,
                     args.p_stop,
                     args.p_min,
                     args.p_trans
                 )
-            
-            stats = calculate_stats(merged_repertoire)
+            available_merged_repertoire = get_cleaned_bcrs_for_newick(merged_repertoire)
+            stats = calculate_stats(available_merged_repertoire)
             success = (stats['num_unique_sequences'] >= args.min_seq and 
                       stats['max_affinity'] >= args.t_max)
             
@@ -891,11 +922,11 @@ def main():
             #     for k, v in stats.items():
             #         f.write(f"{k}: {v}\n")
             
-            export_to_fasta(merged_repertoire, run_folder / "repertoire.fasta")
-            newick = export_to_newick(merged_repertoire, run_folder / "repertoire.nk")
-            
+            export_to_fasta(available_merged_repertoire, run_folder / "repertoire.fasta")
+            newick = export_to_newick(available_merged_repertoire, run_folder / "repertoire.nk")
+            args.plot_tree = True
             if args.plot_tree and success:  # Only plot trees for successful runs
-                node_weights = {item['id']: item['abundance'] for item in merged_repertoire}
+                node_weights = {item['id']: item['abundance'] for item in available_merged_repertoire}
                 plot_newick_bcellTree(
                     newick, node_weights, 
                     run_folder / "lineage_tree.png",
@@ -910,7 +941,7 @@ def main():
             with open(run_folder / "repertoire_info.csv", 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=keys_to_include)
                 writer.writeheader()
-                for entry in merged_repertoire:
+                for entry in available_merged_repertoire:
                     writer.writerow({k: entry[k] for k in keys_to_include if k in entry})
             
             # Save metadata
