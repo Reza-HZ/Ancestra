@@ -225,7 +225,7 @@ class BCRSimulator:
                                         max_generations, minimum_num_unique_sequences, mutation_rate, p_sub, p_stop, p_min, p_trans):
         root = self._generate_initial_bcr()
         root["affinity"] = pathogen.calculate_affinity_a(root["a_sequence"][root['cdr3_start']:root['cdr3_end']+1])
-        root["abundance"] = 1
+        root["abundance"] = 0
         all_bcrs = [root]
         current_generation = [root]
         generation = 1
@@ -255,7 +255,7 @@ class BCRSimulator:
                         affinity = parent['affinity']
                         frame = parent['frame']
                     temp_aff_thresh = thresholds[generation]
-                    abundance = 1
+                    abundance = 0
                     
                     if affinity >= temp_aff_thresh and min_stop == 0:
                         selection_p = 1
