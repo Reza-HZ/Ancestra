@@ -783,7 +783,7 @@ def parse_arguments():
     
     # Input paths
     parser.add_argument("--input-dir", type=str, 
-                       default=os.path.join(os.path.dirname(__file__), "IGH genes"),
+                       default=os.path.join(os.path.dirname(__file__), "Data"),
                        help="Directory containing V/D/J FASTA and epitope.txt files")
     
     # Simulation parameters
