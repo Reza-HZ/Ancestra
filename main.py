@@ -789,7 +789,7 @@ def parse_arguments():
     # Simulation parameters
     parser.add_argument("--clones", type=int, default=1, help="Number of independent clones (in a repertoire) to simulate")
     parser.add_argument("--max-gen", type=int, default=30, help="Maximum depth of lineage expansion")
-    parser.add_argument("--min-seq", type=int, default=100, help="Minimum unique sequences required for acceptance")
+    parser.add_argument("--min-seq", type=int, default=200, help="Minimum unique sequences required for acceptance")
     parser.add_argument("--t-max", type=float, default=0.6, help="Upper bound for selecting high-affinity BCRs during simulation")
     parser.add_argument("--t-min", type=float, default=0.3, help="Minimum affinity required for BCRs to survive early generations")
     parser.add_argument("--mu", type=float, default=0.001, help="Probability of baseline mutation per nucleotide per sequence")
