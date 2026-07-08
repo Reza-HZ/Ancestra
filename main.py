@@ -788,9 +788,9 @@ def parse_arguments():
     
     # Simulation parameters
     parser.add_argument("--clones", type=int, default=1, help="Number of independent clones (in a repertoire) to simulate")
-    parser.add_argument("--max-gen", type=int, default=40, help="Maximum depth of lineage expansion")
-    parser.add_argument("--min-seq", type=int, default=200, help="Minimum unique sequences required for acceptance")
-    parser.add_argument("--t-max", type=float, default=0.7, help="Upper bound for selecting high-affinity BCRs during simulation")
+    parser.add_argument("--max-gen", type=int, default=30, help="Maximum depth of lineage expansion")
+    parser.add_argument("--min-seq", type=int, default=100, help="Minimum unique sequences required for acceptance")
+    parser.add_argument("--t-max", type=float, default=0.6, help="Upper bound for selecting high-affinity BCRs during simulation")
     parser.add_argument("--t-min", type=float, default=0.3, help="Minimum affinity required for BCRs to survive early generations")
     parser.add_argument("--mu", type=float, default=0.001, help="Probability of baseline mutation per nucleotide per sequence")
     parser.add_argument("--p-sub", type=float, default=0.3, help="Survival probability for in-frame low-affinity sequences")
@@ -924,7 +924,6 @@ def main():
             
             export_to_fasta(available_merged_repertoire, run_folder / "repertoire.fasta")
             newick = export_to_newick(available_merged_repertoire, run_folder / "repertoire.nk")
-            args.plot_tree = True
             if args.plot_tree and success:  # Only plot trees for successful runs
                 node_weights = {item['id']: item['abundance'] for item in available_merged_repertoire}
                 plot_newick_bcellTree(
