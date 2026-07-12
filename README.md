@@ -56,6 +56,7 @@ Unlike purely sequence-level simulators, Ancestra jointly models:
   * `ete3`
   * `mplcursors`
   * `legacy-cgi`
+
 Install dependencies via pip:
 
 ```bash
