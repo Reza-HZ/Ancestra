@@ -55,11 +55,11 @@ Unlike purely sequence-level simulators, Ancestra jointly models:
   * `matplotlib`
   * `ete3`
   * `mplcursors`
-
+  * `legacy-cgi`
 Install dependencies via pip:
 
 ```bash
-pip install numpy biopython matplotlib ete3 mplcursors
+pip install numpy biopython matplotlib ete3 mplcursors legacy-cgi
 ```
 
 ---
