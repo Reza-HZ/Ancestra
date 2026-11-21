@@ -458,7 +458,7 @@ def calculate_stats(bcrs):
     generations = [b['generation'] for b in bcrs]
     abundances = [b['abundance'] for b in bcrs]
     unique_seqs = set(b['sequence'] for b in bcrs)
-    cdr_3s = [b['cdr3_len'] for b in bcrs]
+    #cdr_3s = [b['cdr3_len'] for b in bcrs]
     return {
         "naive_affinity": bcrs[0]['affinity'],
         "mean_affinity": np.mean(affinities),
@@ -472,17 +472,18 @@ def calculate_stats(bcrs):
         "max_generation": max(generations),
         "num_bcrs": len(bcrs),
         "num_unique_sequences": len(unique_seqs),
-        "cdr3s_len": cdr_3s
+        #"cdr3s_len": cdr_3s
     }
 
 
-def plot_newick_bcellTree(newick, node_weights, output_file, title_name = 'Hi' ,title_num = 0):
+def plot_newick_bcellTree(newick, repertoire, output_file,
+                          title_name='Run', title_num=0):
+    node_weights = {item['id']: item['abundance'] for item in repertoire}
     def rectangular_layout(tree):
-        positions = {}
-        x_offset = 0
-        y_offset = 0
-        level_spacing = 50  # Vertical spacing between levels
-        sibling_spacing = 100  # Horizontal spacing between siblings
+        positions     = {}
+        x_offset      = 0
+        level_spacing  = 50
+        sibling_spacing = 100
 
         def assign_positions(node, x, y):
             nonlocal x_offset
@@ -494,105 +495,94 @@ def plot_newick_bcellTree(newick, node_weights, output_file, title_name = 'Hi' ,
                 for child in node.children:
                     assign_positions(child, x, y - level_spacing)
                     child_positions.append(positions[child.name][0])
-                positions[node.name] = (sum(child_positions) / len(child_positions), y)
+                positions[node.name] = (
+                    sum(child_positions) / len(child_positions), y
+                )
 
-        assign_positions(tree, x_offset, y_offset)
+        assign_positions(tree, x_offset, 0)
         return positions
-    node_info = {}
-    for key, val in node_weights.items():
-        node_info[key] = f'Node_name: {key}\n\nAbundancy: {int(val)}'
-    t = Tree(newick, format=1)
+
+    node_info = {
+        key: f'Node_name: {key}\n\nAbundancy: {int(val)}'
+        for key, val in node_weights.items()
+    }
+    t          = Tree(newick, format=1)
     tree_nodes = {node.name for node in t.traverse() if node.name}
-    node_info.update({key: 'Node_name: ''\n\nAbundancy: 1' for key in tree_nodes if key not in node_info})
+    node_info.update({
+        key: 'Node_name: \n\nAbundancy: 1'
+        for key in tree_nodes if key not in node_info
+    })
     node_weights.update({key: 1 for key in tree_nodes if key not in node_weights})
-    max_weight = max(node_weights.values())
-    node_sizes = {node: (weight / max_weight) * 1000 for node, weight in node_weights.items()}
-    weights = np.array(list(node_weights.values()))
-    if weights.max() == weights.min():
-        normalized_weights = np.ones_like(weights) 
-    else:
-        normalized_weights = (weights - weights.min()) / (weights.max() - weights.min())  # Scale between 0 and 1
-    colors = cm.viridis(normalized_weights)
-    
-    # Create a mapping of nodes to colors
-    node_colors = {node: colors[idx] for idx, node in enumerate(node_weights.keys())}
-    pos = rectangular_layout(t)
-    
-    # Draw the tree with rectangular edges
+
+    max_weight   = max(node_weights.values())
+    node_sizes   = {n: (w / max_weight) * 1000 for n, w in node_weights.items()}
+    weights      = np.array(list(node_weights.values()))
+    norm_weights = (
+        np.ones_like(weights) if weights.max() == weights.min()
+        else (weights - weights.min()) / (weights.max() - weights.min())
+    )
+    colors      = cm.viridis(norm_weights)
+    node_colors = {n: colors[i] for i, n in enumerate(node_weights.keys())}
+    pos         = rectangular_layout(t)
+
     fig = plt.figure(figsize=(8, 5))
-    fig.canvas.manager.set_window_title(f'{title_name} T{title_num+1}')
+    fig.canvas.manager.set_window_title(f'{title_name} T{title_num + 1}')
 
     x_coords = [x for x, y in pos.values()]
     y_coords = [y for x, y in pos.values()]
-    x_range = max(x_coords) - min(x_coords)
-    y_range = max(y_coords) - min(y_coords)
+    x_range  = max(x_coords) - min(x_coords)
+    y_range  = max(y_coords) - min(y_coords)
     x_margin = x_range * 0.3 if x_range > 0 else 1.0
     y_margin = y_range * 0.3 if y_range > 0 else 1.0
     plt.gca().set_xlim(min(x_coords) - x_margin, max(x_coords) + x_margin)
     plt.gca().set_ylim(min(y_coords) - y_margin, max(y_coords) + y_margin)
-    
-    # Draw nodes
-    scatter = plt.scatter([], [], s=[], alpha=0.9, color=[], edgecolor="black", zorder=2)
-    scatter.set_offsets([pos[node] for node in tree_nodes])
-    scatter.set_sizes([node_sizes[node] for node in tree_nodes])
-    scatter.set_color([node_colors[node] for node in tree_nodes])
 
-    for i, node in enumerate(tree_nodes):
+    scatter = plt.scatter([], [], s=[], alpha=0.9, color=[], edgecolor="black", zorder=2)
+    scatter.set_offsets([pos[n] for n in tree_nodes])
+    scatter.set_sizes([node_sizes[n] for n in tree_nodes])
+    scatter.set_color([node_colors[n] for n in tree_nodes])
+
+    for node in tree_nodes:
         if node == "naive":
-            plt.scatter(
-                pos[node][0], pos[node][1],
-                s=20,
-                alpha=0.9,
-                color="black",
-                edgecolor="black",
-                zorder=2, 
-                marker="^" 
-            )
-    
+            plt.scatter(pos[node][0], pos[node][1],
+                        s=20, alpha=0.9, color="black",
+                        edgecolor="black", zorder=2, marker="^")
+
     for node in t.traverse("postorder"):
         if not node.is_root():
-            parent = node.up
-            x_start, y_start = pos[parent.name]
-            x_end, y_end = pos[node.name]
-            plt.plot([x_start, x_end], [y_start, y_start], color="black", lw=1, zorder=1)
-            plt.plot([x_end, x_end], [y_start, y_end], color="black", lw=1, zorder=1)
-
+            parent       = node.up
+            x_s, y_s    = pos[parent.name]
+            x_e, y_e    = pos[node.name]
+            plt.plot([x_s, x_e], [y_s, y_s], color="black", lw=1, zorder=1)
+            plt.plot([x_e, x_e], [y_s, y_e], color="black", lw=1, zorder=1)
 
     plt.axis("off")
-    
     cursor = mplcursors.cursor(scatter, hover=True)
 
     @cursor.connect("add")
     def on_add(sel):
         node_name = list(tree_nodes)[sel.index]
         info_text = node_info.get(node_name, "No information available")
-        # width = 20  # Adjust the width as per your preference
-        # centered_text = "\n".join(line.center(width) for line in info_text.splitlines())
-        # sel.annotation.set_text(centered_text)
         sel.annotation.set_text(info_text)
-        sel.annotation.set_multialignment('left') 
-        bbox_properties = dict(
-        boxstyle="round,pad=0.7",
-        edgecolor="black",
-        facecolor="yellow",
-        linewidth=1,
-        alpha=0.7
-        )
-        sel.annotation.set_bbox(bbox_properties)
+        sel.annotation.set_multialignment('left')
+        sel.annotation.set_bbox(dict(
+            boxstyle="round,pad=0.7", edgecolor="black",
+            facecolor="yellow", linewidth=1, alpha=0.7
+        ))
         sel.annotation.arrowprops = None
-        sel.annotation.get_bbox_patch()
-        
-        @sel.annotation.axes.figure.canvas.mpl_disconnect
-        def remove_annotation(event):
-            sel.annotation.set_visible(False)
-            sel.annotation.axes.figure.canvas.draw_idle()
+
     plt.savefig(output_file, format='png')
     plt.close()
 
+
 def export_to_fasta(bcrs, filename):
-    with open(filename, 'w') as f:
+    base, ext = os.path.splitext(filename)
+    new_filename = f"{base}_available{ext}"
+    with open(filename, 'w') as f, open(new_filename, 'w') as f_new:
         for b in bcrs:
             f.write(f">{b['id']}@{b['abundance']}\n{b['sequence']}\n")
+            if b['id']=='naive' or b.get('abundance', 0) > 0:
+                f_new.write(f">{b['id']}@{b['abundance']}\n{b['sequence']}\n")
 
 
 def get_cleaned_bcrs_for_newick(bcrs):
@@ -783,13 +773,13 @@ def parse_arguments():
     
     # Input paths
     parser.add_argument("--input-dir", type=str, 
-                       default=os.path.join(os.path.dirname(__file__), "Data"),
+                       default=os.path.join(os.path.dirname(__file__), "IGH genes"),
                        help="Directory containing V/D/J FASTA and epitope.txt files")
     
     # Simulation parameters
     parser.add_argument("--clones", type=int, default=1, help="Number of independent clones (in a repertoire) to simulate")
     parser.add_argument("--max-gen", type=int, default=30, help="Maximum depth of lineage expansion")
-    parser.add_argument("--min-seq", type=int, default=200, help="Minimum unique sequences required for acceptance")
+    parser.add_argument("--min-seq", type=int, default=100, help="Minimum unique sequences required for acceptance")
     parser.add_argument("--t-max", type=float, default=0.6, help="Upper bound for selecting high-affinity BCRs during simulation")
     parser.add_argument("--t-min", type=float, default=0.3, help="Minimum affinity required for BCRs to survive early generations")
     parser.add_argument("--mu", type=float, default=0.001, help="Probability of baseline mutation per nucleotide per sequence")
@@ -827,7 +817,7 @@ def validate_inputs(args):
         sys.exit(1)
 
 
-def save_run_metadata(run_dir, args, stats, success):
+def save_run_metadata(run_dir, filename, args, stats, success):
     """Save run configuration and results for reproducibility."""
     metadata = {
         "timestamp": datetime.now().isoformat(),
@@ -835,7 +825,7 @@ def save_run_metadata(run_dir, args, stats, success):
         "stats": stats,
         "success": success
     }
-    with open(os.path.join(run_dir, "run_metadata.json"), 'w') as f:
+    with open(os.path.join(run_dir, filename), 'w') as f:
         json.dump(metadata, f, indent=2)
 
 
@@ -864,9 +854,10 @@ def main():
     base_output_dir = Path(args.output_dir)
     base_output_dir.mkdir(parents=True, exist_ok=True)
     
-    logger.info(f"🎯 Target: {args.clones} successful clones (min {args.min_seq} seqs, affinity ≥ {args.t_max})\n")
+    logger.info(f"Target: {args.clones} successful clones (min {args.min_seq} seqs, affinity ≥ {args.t_max})\n")
     
     while successful_runs < args.clones:
+        is_multree = False
         attempts += 1
         logger.info(f"\n{'='*60}")
         logger.info(f"Attempt #{attempts} | Successful: {successful_runs}/{args.clones}")
@@ -901,9 +892,9 @@ def main():
                     args.p_trans
                 )
             available_merged_repertoire = get_cleaned_bcrs_for_newick(merged_repertoire)
-            stats = calculate_stats(available_merged_repertoire)
-            success = (stats['num_unique_sequences'] >= args.min_seq and 
-                      stats['max_affinity'] >= args.t_max)
+            stats_available = calculate_stats(available_merged_repertoire)
+            stats = calculate_stats(merged_repertoire)
+            success = (stats_available['num_unique_sequences'] >= args.min_seq and stats_available['max_affinity'] >= args.t_max)
             
             # Determine output folder: success gets numbered run, failure goes to "rejected"
             if success:
@@ -911,6 +902,8 @@ def main():
                 run_folder = base_output_dir / "successful_clones" / f"run_{successful_runs}_gen{args.max_gen}_minSeq{args.min_seq}"
                 status_emoji = "✅"
                 status_msg = "ACCEPTED"
+                if stats_available['num_unique_sequences'] != stats_available['num_bcrs']:
+                    is_multree = True
             else:
                 run_folder = base_output_dir / "rejected_clones" / f"rejected_attempt_{attempts}"
                 status_emoji = "❌"
@@ -922,33 +915,59 @@ def main():
             #     for k, v in stats.items():
             #         f.write(f"{k}: {v}\n")
             
-            export_to_fasta(available_merged_repertoire, run_folder / "repertoire.fasta")
-            newick = export_to_newick(available_merged_repertoire, run_folder / "repertoire.nk")
-            if args.plot_tree and success:  # Only plot trees for successful runs
-                node_weights = {item['id']: item['abundance'] for item in available_merged_repertoire}
+            export_to_fasta(merged_repertoire, run_folder / "repertoire.fasta")
+            newick = export_to_newick(merged_repertoire, run_folder / "repertoire.nk")
+            newick_available = export_to_newick(available_merged_repertoire, run_folder / "repertoire_available.nk")
+
+            args.plot_tree = True
+            if args.plot_tree and success:
                 plot_newick_bcellTree(
-                    newick, node_weights, 
+                    newick, merged_repertoire,
                     run_folder / "lineage_tree.png",
                     title_name=f"RUN {successful_runs}",
-                    title_num=successful_runs
+                    title_num=successful_runs,
+                )
+                plot_newick_bcellTree(
+                    newick_available, available_merged_repertoire,
+                    run_folder / "lineage_tree_available.png",
+                    title_name=f"RUN {successful_runs}",
+                    title_num=successful_runs,
                 )
             
             # Save sequence info
             keys_to_include = ['id', 'a_sequence', 'frame', 'cdr3_start', 'cdr3_end', 
                              'cdr3_len', 'generation', 'parent', 'mutations', 
                              'affinity', 'abundance']
-            with open(run_folder / "repertoire_info.csv", 'w', newline='') as csvfile:
+            with open(run_folder / "available_repertoire_info.csv", 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=keys_to_include)
                 writer.writeheader()
                 for entry in available_merged_repertoire:
                     writer.writerow({k: entry[k] for k in keys_to_include if k in entry})
+            with open(run_folder / "repertoire_info.csv", 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=keys_to_include)
+                writer.writeheader()
+                for entry in merged_repertoire:
+                    writer.writerow({k: entry[k] for k in keys_to_include if k in entry})
             
             # Save metadata
-            save_run_metadata(run_folder, args, stats, success)
+            save_run_metadata(run_folder, "available_metadata.json",args, stats_available, success)
+            save_run_metadata(run_folder, "metadata.json",args, stats, success)
+
+            if is_multree:
+                unique_seq_list = group_by_sequence(merged_repertoire)
+                with open(os.path.join(run_folder, "duplicated_seqs.txt"), 'w') as file:
+                    for key, value in unique_seq_list.items():
+                        if len(value) > 1:
+                            file.write(f"{key}: {value}\n")
+                available_unique_seq_list = group_by_sequence(available_merged_repertoire)
+                with open(os.path.join(run_folder, "available_duplicated_seqs.txt"), 'w') as file:
+                    for key, value in available_unique_seq_list.items():
+                        if len(value) > 1:
+                            file.write(f"{key}: {value}\n")
             
             # Log outcome
-            logger.info(f"{status_emoji} {status_msg} | Unique seqs: {stats['num_unique_sequences']}/{args.min_seq} | "
-                       f"Max affinity: {stats['max_affinity']:.3f}/{args.t_max}")
+            logger.info(f"{status_emoji} {status_msg} | Unique seqs: {stats_available['num_unique_sequences']}/{args.min_seq} | "
+                       f"Max affinity: {stats_available['max_affinity']:.3f}/{args.t_max}")
             logger.info(f"📁 Saved to: {run_folder.name}")
             
             # Early exit if we hit target
